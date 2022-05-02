@@ -1,0 +1,486 @@
+
+FLIGHTS OPTIMIZATION
+
+4. EXPLORING THE PATTERNS
+
+TASK 4.1. 
+Ѓаза данных содержит список аэропортов практически всех крупных городов ђоссии. ‚ большинстве городов есть только один аэропорт. €сключение составлЯет: 
+
+Answer: Moscow, Ulyanovsk
+
+SELECT city,
+       count(city) AS qty
+FROM dst_project.airports
+GROUP BY 1
+ORDER BY 2 DESC
+
+__________
+
+TASK 4.2. 
+Question 1
+
+’аблица рейсов содержит всю информацию о прошлых, текущих и запланированных рейсах. ‘колько всего статусов длЯ рейсов определено в таблице?
+
+Answer: 6
+
+SELECT count(DISTINCT status)
+FROM dst_project.flights
+
+__________
+
+Question 2
+
+Љакое количество самолетов находЯтсЯ в воздухе на момент среза в базе (статус рейса ЗсамолЮт уже вылетел и находитсЯ в воздухеИ)?
+
+Answer: 58
+
+SELECT count(*)
+FROM dst_project.flights
+WHERE status = 'Departed'
+
+__________
+
+Question 3
+
+Њеста определЯют схему салона каждой модели. ‘колько мест имеет самолет модели  (Boeing 777-300)?
+
+Answer: 402
+
+SELECT count(*)
+FROM dst_project.seats
+JOIN dst_project.aircrafts 
+    USING(aircraft_code)
+WHERE model = 'Boeing 777-300'
+
+__________
+
+Question 4
+
+‘колько состоЯвшихсЯ (фактических) рейсов было совершено между 1 апрелЯ 2017 года и 1 сентЯбрЯ 2017 года?
+
+Answer: 74227
+
+SELECT count(*)
+FROM dst_project.flights
+WHERE 
+    status = 'Arrived'
+    AND actual_arrival BETWEEN '2017-04-01' AND '2017-09-01'
+
+__________
+
+TASK 4.3. 
+
+Question 1
+
+‘колько всего рейсов было отменено по данным базы?
+
+Answer: 437
+
+SELECT count(*) /* выводим количество */
+FROM dst_project.flights 
+WHERE status = 'Cancelled' /* фильтрациЯ результатов по отмене рейса */
+
+__________
+
+Question 2
+
+‘колько самолетов моделей типа Boeing, Sukhoi Superjet, Airbus находитсЯ в базе авиаперевозок?
+
+Answer: 3, 1, 3
+
+SELECT 
+    (SELECT COUNT(*) /* выводим количество самолЮтов, отобранных в запросе ниже */
+    FROM dst_project.aircrafts /* берЮм данные из таблицы "‘амолЮты" */
+    WHERE model like ('Boeing%')) AS Boeing, /* отбираем данные по всем модификациЯм Boeing */
+    (SELECT COUNT(*)
+    FROM dst_project.aircrafts
+    WHERE model like ('Sukhoi%')) AS Sukhoi_Superjet, /* отбираем данные по всем модификациЯм Sukhoi Superjet */
+    (SELECT COUNT(*)
+    FROM dst_project.aircrafts
+    WHERE model like ('Airbus%')) AS Airbus /* отбираем данные по всем модификациЯм Airbus */
+    
+FROM dst_project.aircrafts
+LIMIT 1;
+
+P.S. ‚ условии заданиЯ речь идЮт о базе авиаперевозок, а не базе самолЮтов. …сли брать значениЯ по базе авиаперевозок, то в ней представлены только 2 модели Airbus вместо 3 в базе самолЮтов.
+
+SELECT count(DISTINCT aircraft_code)
+FROM dst_project.flights
+WHERE aircraft_code in
+    (SELECT aircraft_code
+     FROM dst_project.aircrafts
+     WHERE model like ('Airbus%'))
+
+__________
+
+Question 3
+
+‚ какой части (частЯх) света находитсЯ больше аэропортов?
+
+Answer: Europe, Asia
+
+SELECT
+  (SELECT count(*) /* выводим количество */
+   FROM dst_project.airports /* берЮм данные из таблицы "Ђэропорты" */
+   WHERE timezone like ('Asia%') ) AS Asia, /* прописываем условие принадлежности аэропорта к Ђзии */
+
+  (SELECT count(*) 
+   FROM dst_project.airports
+   WHERE timezone like ('Europe%') ) AS Europe, /* прописываем условие принадлежности аэропорта к …вропе */
+
+  (SELECT count(*)
+   FROM dst_project.airports
+   WHERE timezone like ('Australia%') ) AS Australia, /* прописываем условие принадлежности аэропорта к Ђвстралии */
+       Count(*) AS Total /* считаем общее количество аэропортов, напрЯмую по списку в исходной таблице */
+FROM dst_project.airports
+LIMIT 1;
+
+__________
+
+Question 4 
+
+“ какого рейса была самаЯ большаЯ задержка прибытиЯ за все времЯ сбора данных? ‚ведите id рейса (flight_id)
+
+Answer: 157571
+
+SELECT flight_id,
+       actual_arrival - scheduled_arrival AS max_delay /* выводим конкретную задержку */
+FROM dst_project.flights
+WHERE actual_arrival IS NOT NULL /* берЮм данные только в тех кортежах, где указано времЯ прибытиЯ */
+ORDER BY 2 DESC /* фильтруем данные по убыванию, чтобы максимальнаЯ задержка расположилась первой */
+LIMIT 1;
+
+__________
+
+TASK 4.4. 
+
+Question 1
+
+Љогда был запланирован самый первый вылет, сохраненный в базе данных?
+
+Answer: 14.08.2016
+
+SELECT scheduled_departure /* выводим данные запланированного вылета */
+FROM dst_project.flights 
+ORDER BY 1 /* фильтруем данные по возрастанию, чтобы данные первый запланированный вылет расположилсЯ первым */
+LIMIT 1;
+
+__________
+
+Question 2
+
+‘колько минут составлЯет запланированное времЯ полета в самом длительном рейсе?
+
+Answer: 530
+
+SELECT date_part('hour', scheduled_arrival - scheduled_departure) * 60 
+    + date_part('minute', scheduled_arrival - scheduled_departure) 
+    /* выводим общее количество минут запланированного полЮта */
+FROM dst_project.flights
+ORDER BY 1 DESC /* фильтруем значениЯ по убыванию, чтобы в начале отобразилсЯ самый продолжительный запланированный полЮт */
+LIMIT 1 /* выводим только одно первое значение, больше не нужно */;
+
+__________
+
+Question 3
+
+Њежду какими аэропортами пролегает самый длительный по времени запланированный рейс?
+
+Answer: DME - UUS
+
+SELECT departure_airport,
+       arrival_airport /* выводим коды аэропортов вылета и прилета */
+FROM dst_project.flights
+WHERE scheduled_arrival - scheduled_departure in 
+/* прописываем условие по которому будем отбирать максимальную запланированную продолжительность полЮта */
+    (SELECT scheduled_arrival - scheduled_departure
+     FROM dst_project.flights
+     ORDER BY 1 DESC /* фильтруем значениЯ по убыванию, чтобы в начале отобразилсЯ самый продолжительный запланированный полЮт */
+     LIMIT 1 /* выводим только одно первое значение, больше не нужно */)
+LIMIT 1;
+
+__________
+
+Question 4
+
+ ‘колько составлЯет среднЯЯ дальность полета среди всех самолетов в минутах? ‘екунды округлЯютсЯ в меньшую сторону (отбрасываютсЯ до минут).
+
+Answer: 128
+
+SELECT date_part('hour', avg(f.scheduled_arrival - f.scheduled_departure)) * 60 
+    + date_part('minute', avg(f.scheduled_arrival - f.scheduled_departure))
+/* выводим сумму в минутах средней по времени продолжительности запланированного полета */
+/* секундны не берЮм в расчЮт, так как по условию заданиЯ они отбрасываютсЯ (поэтому и не учитываем 21 секунду) */
+FROM dst_project.flights f;
+
+__________
+
+TASK 4.5. 
+
+Question 1 
+
+Њест какого класса у SU9 больше всего?
+
+Answer: Economy
+
+SELECT fare_conditions,
+       count(fare_conditions) /* выводим классы и количество по мест по ним */
+FROM dst_project.seats
+WHERE aircraft_code = 'SU9' /* используем условие соответствиЯ к конкретному id модели самолЮта */
+GROUP BY 1;
+
+__________
+
+Question 2
+
+Љакую самую минимальную стоимость составило бронирование за всю историю?
+
+Answer: 3400
+
+SELECT total_amount
+FROM dst_project.bookings
+ORDER BY 1 ASC
+LIMIT 1;
+
+__________
+
+Question 3 
+
+Љакой номер места был у пассажира с id = 4313 788533?
+
+Answer: 2A
+
+SELECT bp.seat_no /* выводим номер места */
+FROM dst_project.tickets t
+JOIN dst_project.boarding_passes bp USING(ticket_no) /* объединЯем таблицы tickets и boarding_passes */
+WHERE t.passenger_id = '4313 788533' /* прописываем условие по конкретному id пассажира*/;
+
+__________
+
+5. PRELIMINARY ANALYSIS
+
+TASK 5.1.
+
+Question 1
+
+Ђнапа С курортный город на юге ђоссии. ‘колько рейсов прибыло в Ђнапу за 2017 год?
+
+Answer: 486
+
+SELECT count(*) /* выводим количество */
+FROM dst_project.flights
+WHERE arrival_airport in
+/* прописываем условие соответствиЯ записей коду аэропорта Ђнапы и году прибытиЯ - 2017 */
+    (SELECT airport_code
+    FROM dst_project.airports
+    WHERE city = 'Anapa')
+    AND date_part('year', actual_arrival) = 2017;
+
+__________
+
+Question 2 
+
+‘колько рейсов из Ђнапы вылетело зимой 2017 года?
+
+Answer: 127
+
+SELECT count(*)
+FROM dst_project.flights
+WHERE departure_airport in
+/* прописываем условие соответствиЯ записей коду аэропорта Ђнапы и году вылета 2017 + месЯцам вылета - декабрю, Январю и февралю + исключаем отменЮнные рейсы */
+    (SELECT airport_code
+     FROM dst_project.airports
+     WHERE city = 'Anapa')
+  AND date_part('year', actual_departure) = 2017
+  AND date_part('month', actual_departure) in (12,1,2)
+  AND status not in ('Cancelled');
+
+__________
+
+Question 3
+
+Џосчитайте количество отмененных рейсов из Ђнапы за все времЯ.
+
+Answer: 1
+
+SELECT count(*)
+FROM dst_project.flights
+WHERE departure_airport in
+/* прописываем условие соответствиЯ записей коду аэропорта Ђнапы и статусы вылета рейса "ЋтменЮн" */
+    (SELECT airport_code
+     FROM dst_project.airports
+     WHERE city = 'Anapa')
+  AND status = 'Cancelled';
+
+__________
+
+Question 4
+
+‘колько рейсов из Ђнапы не летают в Њоскву?
+
+Answer: 453
+
+SELECT count(*)
+FROM dst_project.flights
+WHERE departure_airport in
+/* прописываем условиЯ соответствиЯ записей коду аэропорта Ђнапы (вылет) и отсутствию совпадений с кодами аэропортов Њосквы (прилЮт) */
+    (SELECT airport_code
+    FROM dst_project.airports
+    WHERE city = 'Anapa') 
+    AND arrival_airport not in 
+    (SELECT airport_code
+    FROM dst_project.airports
+    WHERE city = 'Moscow')
+
+__________
+
+Question 5
+
+ЉакаЯ модель самолета летЯщего на рейсах из Ђнапы имеет больше всего мест?
+
+Answer: Boeing 737-300
+
+SELECT *
+FROM
+/* соединЯем две таблицы с вложенными запросами: */
+  (SELECT DISTINCT model,
+                   aircraft_code /* перваЯ таблица - выводим уникальные названиЯ моделей и коды самолЮтов */
+   FROM dst_project.flights
+   INNER JOIN dst_project.aircrafts USING(aircraft_code) /* соединЯем две таблицы - полЮты и самолЮты */
+   WHERE departure_airport in /* прописываем условие соответствиЯ аэропорта вылета Ђнапе */
+       (SELECT airport_code
+        FROM dst_project.airports
+        WHERE city = 'Anapa')) AS models
+INNER JOIN
+  (SELECT DISTINCT aircraft_code,
+                   count(*) /* втораЯ таблица - выводим уникальные коды самолЮтов и подсчитываем количество мест в каждой модели */
+   FROM dst_project.seats
+   GROUP BY 1) AS seats_qty USING(aircraft_code)
+ORDER BY 3 DESC /* фильтруем данные по количеству мест в самолЮтах по убыванию */;
+
+__________
+
+6. PROFITABILITY ASSESSMANT
+
+/* Џрописываем запрос CTE, где выведем полЮты из Ђнапы за зимний период 2017 года
+Ѓудем использовать его не единожды  */
+WITH f AS 
+(SELECT *
+FROM dst_project.flights f
+WHERE f.departure_airport = 'AAQ'
+    AND date_part('year', f.scheduled_departure) = 2017 
+    AND date_part('month', f.scheduled_departure) in (12,1,2) 
+    AND f.status not in ('Cancelled'))
+
+SELECT
+    DISTINCT f.flight_id, /* группируем все данные по идентификатору рейса */
+    query_1.economy_avg_amount, /* выводим среднюю стоимость билета в эконом классе */
+    query_2.business_avg_amount, /* выводим среднюю стоимость билета в бизнес классе */
+    f.actual_departure, /* фактическое времЯ вылета */
+    f.actual_arrival, /* фактическое времЯ прибытиЯ */
+    date_part('minute', f.actual_arrival - f.actual_departure) / 60 
+    + date_part('hour', f.actual_arrival - f.actual_departure) AS duration, /* продолжительность рейса в часах */
+    date_part('minute', f.actual_arrival - f.scheduled_arrival)
+    + date_part('hour', f.actual_arrival - f.scheduled_arrival) * 60 AS minutes_delay, /* задержка рейса в минутах */
+    CASE 
+        WHEN date_part('month', f.actual_arrival) = 12 THEN 1 
+        ELSE 0
+    END AS december, /* использовал здесь и далее функцию Case / When / Else / End, так как в MetaBase код функции IF не работал */ 
+    CASE 
+        WHEN date_part('month', f.actual_arrival) = 1 THEN 1 
+        ELSE 0
+    END AS january,
+    CASE 
+        WHEN date_part('month', f.actual_arrival) = 2 THEN 1 
+        ELSE 0
+    END AS february, /* создаЮм dummy переменные длЯ зимних месЯцев */
+    'Anapa' AS departure_city, /* выводим название города вылета */
+    a.city AS arrival_city, /* выводим название города прибытиЯ */
+    CASE 
+        WHEN a.city = 'Moscow' THEN 1 
+        ELSE 0
+    END AS moscow_arrival,
+    CASE 
+        WHEN a.city = 'Belgorod' THEN 1 
+        ELSE 0 
+    END AS belgorod_arrival,
+    CASE 
+        WHEN a.city = 'Novokuznetsk' THEN 1 
+        ELSE 0 
+    END AS novokuznetsk_arrival, /* создаЮм dummy переменные длЯ городов прибытиЯ */
+    ac.model, /* модель самолЮта */
+    CASE 
+        WHEN ac.model = 'Boeing 737-300' THEN 1 
+        ELSE 0
+    END AS boeing_737_300,
+    CASE 
+        WHEN ac.model = 'Sukhoi Superjet-100' THEN 1 
+        ELSE 0 
+    END AS sukhoi_superjet_100, /* создаЮм dummy переменные длЯ моделей самолЮтов */
+    query_5.economy_class_capacity, /* вместимость эконом класса */
+    s.airplane_capacity - query_5.economy_class_capacity AS business_class_capacity, /* вместимость бизнес класса */
+    s.airplane_capacity, /* общаЯ вместимость самолЮта */
+    query_3.economy_pass_qty, /* количество пассажиров на рейсе в эконом классе */
+    query_4.total_pass_qty - query_3.economy_pass_qty AS business_pass_qty, /* количество пассажиров на рейсе в бизнес классе */
+    query_4.total_pass_qty, /* общее количество пассажиров на рейсе */
+    (query_4.total_pass_qty * 100) / s.airplane_capacity AS occupancy_perc /* загрузка рейса в процентах */
+FROM f
+    LEFT JOIN /* делаем внешнее соединение, чтобы не потерЯть пропущенные данные в правой таблице */
+        (SELECT 
+            distinct f.flight_id,
+            ROUND(AVG(tf.amount)) AS economy_avg_amount /* округлЯем стоимость билета, без копеек */
+        FROM f
+            JOIN dst_project.ticket_flights tf
+                ON f.flight_id = tf.flight_id
+        WHERE tf.fare_conditions = 'Economy' /* выводим данные только по эконом классу */
+        GROUP BY 1) query_1 /* делаем группировку по flight_id */
+        ON f.flight_id = query_1.flight_id /* соединЯем таблицы по flight_id */
+    LEFT JOIN /* делаем внешнее соединение, чтобы не потерЯть пропущенные данные в правой таблице */
+        (SELECT 
+            distinct f.flight_id,
+            ROUND(AVG(tf.amount)) AS business_avg_amount /* округлЯем стоимость билета, без копеек */
+        FROM f
+            JOIN dst_project.ticket_flights tf
+                ON f.flight_id = tf.flight_id
+        WHERE tf.fare_conditions = 'Business' /* выводим данные только по бизнес классу */
+        GROUP BY 1) query_2 /* делаем группировку по flight_id */
+        ON f.flight_id = query_2.flight_id /* соединЯем таблицы по flight_id */
+    JOIN dst_project.airports a
+        ON f.arrival_airport = a.airport_code
+    JOIN dst_project.aircrafts ac
+        ON f.aircraft_code = ac.aircraft_code
+    JOIN 
+        (SELECT
+            distinct aircraft_code,
+            count(*) AS airplane_capacity /* считаем количество мест в моделЯх самолЮтов */
+        FROM dst_project.seats
+        GROUP BY 1) AS s /* группируем данные по коду самолЮта */
+        ON f.aircraft_code = s.aircraft_code
+    LEFT JOIN /* делаем внешнее соединение, чтобы не потерЯть пропущенные данные в правой таблице */
+        (SELECT
+            distinct(f.flight_id),
+            count(*) AS economy_pass_qty /* считаем количество пассажиров в эконом классе */
+        FROM f
+            JOIN dst_project.ticket_flights tf
+                ON f.flight_id = tf.flight_id
+        WHERE tf.fare_conditions = 'Economy'
+        GROUP BY 1) query_3 /* делаем группировку по flight_id */
+        ON f.flight_id = query_3.flight_id
+    LEFT JOIN /* делаем внешнее соединение, чтобы не потерЯть пропущенные данные в правой таблице */
+        (SELECT 
+            distinct(f.flight_id),
+            count(*) AS total_pass_qty /* считаем общее количество пассажиров */
+        FROM f
+            JOIN dst_project.ticket_flights tf
+                ON f.flight_id = tf.flight_id
+        GROUP BY 1) query_4
+        ON f.flight_id = query_4.flight_id
+    JOIN
+        (SELECT
+            distinct s.aircraft_code,
+            count(*) AS economy_class_capacity /* считаем вместимость эконом класса в самолЮте */
+        FROM dst_project.seats s
+        WHERE s.fare_conditions = 'Economy'
+        GROUP BY 1) AS query_5
+        ON f.aircraft_code = query_5.aircraft_code
+ORDER BY 1 /* сортируем данные по возрастанию flight_id */; 
